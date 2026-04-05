@@ -19,7 +19,7 @@ from commands.ip_cmd import router as ip_router
 from commands.whois_cmd import router as whois_router
 from commands.domain import router as domain_router
 from commands.callbacks import router as cb_router
-from commands.states import router as states_router
+# states.py contient uniquement les classes FSM (pas de router)
 
 load_dotenv()
 
@@ -60,7 +60,7 @@ async def on_shutdown(bot: Bot):
 
 def build_dp() -> Dispatcher:
     dp = Dispatcher()
-    for r in [cb_router, states_router, start_router, sherlock_router,
+    for r in [cb_router, start_router, sherlock_router,
               maigret_router, email_router, breach_router, phone_router,
               ip_router, whois_router, domain_router]:
         dp.include_router(r)
@@ -79,7 +79,7 @@ async def main():
     if WEBHOOK_URL:
         # --- Mode webhook (Render / production) ---
         app = web.Application()
-        app.router.add_get("/", handle_index)          # Page de status
+        app.router.add_get("/", handle_index)
         SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
         setup_application(app, dp, bot=bot)
         runner = web.AppRunner(app)
@@ -87,7 +87,7 @@ async def main():
         site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
         await site.start()
         logger.info(f"🚀 Serveur webhook démarré sur le port {PORT}")
-        await asyncio.Event().wait()          # tourne indéfiniment
+        await asyncio.Event().wait()
     else:
         # --- Mode polling (dev local) ---
         await bot.delete_webhook(drop_pending_updates=True)
