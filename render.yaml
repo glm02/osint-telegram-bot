@@ -2,8 +2,7 @@ services:
   - type: web
     name: osint-telegram-bot
     runtime: python
-    pythonVersion: "3.11.9"
-    buildCommand: pip install -r requirements.txt && pip install "maigret==0.4.4" --no-deps && pip install "aiohttp>=3.9.0,<3.10" --upgrade
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && pip install "maigret==0.4.4" --no-deps
     startCommand: python bot.py
     envVars:
       - key: TELEGRAM_TOKEN
