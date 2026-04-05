@@ -1,87 +1,56 @@
 # 🕵️ OSINT Telegram Bot
 
-Bot Telegram complet pour la reconnaissance OSINT en Python avec `aiogram`.
+Bot Telegram OSINT complet avec **boutons inline**, **FSM** et déploiement **Render**.
 
-## 📋 Commandes disponibles
+## 🚀 Déploiement sur Render (recommandé)
 
-| Commande | Description |
-|---|---|
-| `/start` | Menu principal |
-| `/sherlock <pseudo>` | Recherche pseudo sur 300+ réseaux sociaux |
-| `/maigret <pseudo>` | Profil enrichi multi-sources |
-| `/email <email>` | Comptes associés à un email (Holehe) |
-| `/breach <email>` | Fuites de données (HaveIBeenPwned) |
-| `/pwned <password>` | Vérification mot de passe compromis |
-| `/phone <+33...>` | Analyse numéro de téléphone |
-| `/ip <adresse>` | Géolocalisation + ASN + VPN detect |
-| `/whois <domaine>` | Infos WHOIS |
-| `/domain <domaine>` | Reconnaissance DNS (theHarvester) |
-
-## ⚙️ Installation
-
+### 1. Fork / clone le repo
 ```bash
 git clone https://github.com/glm02/osint-telegram-bot
-cd osint-telegram-bot
+```
+
+### 2. Créer le service sur Render
+1. Aller sur [render.com](https://render.com) → **New → Web Service**
+2. Connecter ce repo GitHub
+3. Render détecte automatiquement `render.yaml`
+4. Remplir les variables d'environnement :
+
+| Variable | Description |
+|---|---|
+| `TELEGRAM_TOKEN` | Token BotFather |
+| `WEBHOOK_URL` | URL publique Render (ex: `https://osint-bot-xxxx.onrender.com`) |
+| `HIBP_API_KEY` | Clé HaveIBeenPwned (~3.50$/mois) |
+| `VERIPHONE_API_KEY` | Clé Veriphone (1000 req/mois gratuit) |
+| `ADMIN_IDS` | Ton user ID Telegram |
+
+### 3. Déployer
+Cliquer **Deploy** — Render lance `pip install -r requirements.txt` puis `python bot.py`.
+
+> ⚠️ **Important** : colle l'URL Render dans `WEBHOOK_URL` *avant* de déployer.
+
+---
+
+## 💻 Dev local (polling)
+
+```bash
 pip install -r requirements.txt
-```
-
-## 🔧 Configuration
-
-Copie `.env.example` vers `.env` et remplis tes clés :
-
-```bash
 cp .env.example .env
-```
-
-```env
-TELEGRAM_TOKEN=ton_token_botfather
-HIBP_API_KEY=ta_cle_hibp
-VERIPHONE_API_KEY=ta_cle_veriphone
-ADMIN_IDS=123456789,987654321
-```
-
-### Obtenir les clés API
-- **Telegram Token** → [@BotFather](https://t.me/BotFather)
-- **HIBP API Key** → [haveibeenpwned.com/API/Key](https://haveibeenpwned.com/API/Key) (~3.50$/mois)
-- **Veriphone** → [veriphone.io](https://veriphone.io) (1000 req/mois gratuit)
-
-## 🚀 Lancement
-
-```bash
+# Laisser WEBHOOK_URL vide dans .env
 python bot.py
 ```
 
-### Déploiement Oracle Cloud (systemd)
+---
 
-```bash
-sudo nano /etc/systemd/system/osint-bot.service
+## 📋 Commandes & Boutons
+
+Le bot utilise un **menu inline à boutons** — plus besoin de taper les commandes.
+Les commandes `/` restent disponibles en parallèle.
+
 ```
-
-```ini
-[Unit]
-Description=OSINT Telegram Bot
-After=network.target
-
-[Service]
-User=ubuntu
-WorkingDirectory=/home/ubuntu/osint-telegram-bot
-ExecStart=/usr/bin/python3 bot.py
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl enable osint-bot
-sudo systemctl start osint-bot
+/start         → Menu principal (boutons)
+/annuler       → Annuler la saisie en cours
 ```
 
 ## ⚠️ Avertissement légal
 
-Ce bot est destiné à un usage **éducatif et légal uniquement** (pentest avec autorisation, recherches sur soi-même). Toute utilisation abusive est illégale et relève de la responsabilité de l'utilisateur.
-
-## 📦 Dépendances
-
-Voir `requirements.txt`
+Usage éducatif et légal uniquement. Toute utilisation abusive relève de la responsabilité de l'utilisateur.

@@ -1,35 +1,27 @@
 import whois
 from aiogram import Router
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from utils.rate_limit import rate_limit
+from commands.states import OSINTForm
 from utils.admin import admin_only
+from utils.rate_limit import rate_limit
+from utils.keyboards import back_main
 
 router = Router()
 
 
-@router.message(Command("whois"))
-@admin_only
-@rate_limit(seconds=10)
-async def cmd_whois(message: Message):
-    parts = message.text.split(None, 1)
-    if len(parts) < 2:
-        await message.answer("Usage : `/whois <domaine.com>`")
-        return
-
-    domain = parts[1].strip().lower()
+async def _run_whois(domain: str, message: Message):
     await message.answer(f"🔎 WHOIS pour `{domain}`...")
-
     try:
         w = whois.whois(domain)
     except Exception as e:
-        await message.answer(f"❌ Erreur WHOIS : `{e}`")
+        await message.answer(f"❌ Erreur WHOIS : `{e}`", reply_markup=back_main())
         return
 
     def fmt(val):
-        if isinstance(val, list):
-            return ", ".join(str(v) for v in val[:3])
+        if isinstance(val, list): return ", ".join(str(v) for v in val[:3])
         return str(val) if val else "N/A"
 
     result = (
@@ -43,5 +35,24 @@ async def cmd_whois(message: Message):
         f"🖥️ Nameservers : `{fmt(w.get('name_servers'))}`\n"
         f"📦 Registrar : `{fmt(w.get('registrar'))}`"
     )
+    await message.answer(result, reply_markup=back_main())
 
-    await message.answer(result)
+
+@router.message(OSINTForm.waiting_whois)
+@admin_only
+@rate_limit(seconds=10)
+async def state_whois(message: Message, state: FSMContext):
+    await state.clear()
+    await _run_whois(message.text.strip(), message)
+
+
+@router.message(Command("whois"))
+@admin_only
+@rate_limit(seconds=10)
+async def cmd_whois(message: Message, state: FSMContext):
+    await state.clear()
+    parts = message.text.split(None, 1)
+    if len(parts) < 2:
+        await message.answer("Usage : `/whois <domaine.com>`")
+        return
+    await _run_whois(parts[1].strip(), message)

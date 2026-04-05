@@ -1,28 +1,27 @@
 from aiogram import Router
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+
+from utils.keyboards import main_menu
 
 router = Router()
 
 
 @router.message(Command("start", "help"))
-async def cmd_start(message: Message):
-    text = (
-        "🕵️ *OSINT Bot* — Reconnaissance open source\n\n"
-        "*👤 Identité / Pseudo*\n"
-        "`/sherlock <pseudo>` — 300+ réseaux sociaux\n"
-        "`/maigret <pseudo>` — Profil enrichi multi-sources\n\n"
-        "*📧 Email*\n"
-        "`/email <email>` — Comptes associés (Holehe)\n"
-        "`/breach <email>` — Fuites de données (HIBP)\n\n"
-        "*🔐 Sécurité*\n"
-        "`/pwned <password>` — Mot de passe compromis ?\n\n"
-        "*📱 Téléphone*\n"
-        "`/phone <+33...>` — Pays, opérateur, type\n\n"
-        "*🌐 Réseau / Domaine*\n"
-        "`/ip <adresse>` — Géoloc + ASN + VPN detect\n"
-        "`/whois <domaine>` — Infos WHOIS\n"
-        "`/domain <domaine>` — Recon DNS (sous-domaines, emails)\n\n"
-        "⚠️ _Usage légal uniquement._"
+async def cmd_start(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "🕵️ *OSINT Bot* — Bienvenue !\n\n"
+        "Sélectionne une catégorie ci-dessous :",
+        reply_markup=main_menu()
     )
-    await message.answer(text)
+
+
+@router.message(Command("annuler", "cancel"))
+async def cmd_cancel(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "❌ Action annulée.\n",
+        reply_markup=main_menu()
+    )

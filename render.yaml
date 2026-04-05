@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: osint-telegram-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      - key: HIBP_API_KEY
+        sync: false
+      - key: VERIPHONE_API_KEY
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: PORT
+        value: 8080
