@@ -14,7 +14,7 @@ def main_menu() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🌐 Réseau",    callback_data="menu_network"),
     )
     builder.row(
-        InlineKeyboardButton(text="🔓 Leaks",     callback_data="menu_leaks"),
+        InlineKeyboardButton(text="🔓 Leaks & Fuites", callback_data="menu_leaks"),
     )
     return builder.as_markup()
 
@@ -32,10 +32,10 @@ def pseudo_menu() -> InlineKeyboardMarkup:
 def email_menu() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="🔗 Comptes liés (Holehe)",  callback_data="ask_email"),
+        InlineKeyboardButton(text="🔗 Comptes liés (Holehe)", callback_data="ask_email"),
     )
     builder.row(
-        InlineKeyboardButton(text="🔓 Fuites (HIBP)",          callback_data="ask_breach"),
+        InlineKeyboardButton(text="🔓 Fuites (BD + LC + HIBP)", callback_data="ask_breach"),
     )
     builder.row(InlineKeyboardButton(text="🔙 Retour", callback_data="menu_main"))
     return builder.as_markup()
@@ -66,10 +66,19 @@ def network_menu() -> InlineKeyboardMarkup:
 def leaks_menu() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="🔓 Email dans des leaks",   callback_data="ask_breach"),
+        InlineKeyboardButton(
+            text="🔍 Recherche multi-bases",
+            callback_data="ask_breach"
+        ),
     )
     builder.row(
-        InlineKeyboardButton(text="🔑 Password compromis ?",   callback_data="ask_pwned"),
+        InlineKeyboardButton(
+            text="🔑 Password compromis ?",
+            callback_data="ask_pwned"
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(text="ℹ️ Sources utilisées", callback_data="leaks_info"),
     )
     builder.row(InlineKeyboardButton(text="🔙 Retour", callback_data="menu_main"))
     return builder.as_markup()
