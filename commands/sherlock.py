@@ -1,8 +1,10 @@
 import asyncio
+import sys
+import os
+from pathlib import Path
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State
 from aiogram.types import Message, BufferedInputFile
 
 from commands.states import OSINTForm
@@ -13,17 +15,43 @@ from utils.keyboards import back_main
 
 router = Router()
 
+def _find_data_json() -> str | None:
+    """Cherche le fichier data.json installé avec sherlock-project."""
+    candidates = []
+    for p in sys.path:
+        candidate = Path(p) / "sherlock" / "resources" / "data.json"
+        if candidate.exists():
+            candidates.append(str(candidate))
+    # Aussi via le package installé
+    try:
+        import sherlock
+        pkg_path = Path(sherlock.__file__).parent / "resources" / "data.json"
+        if pkg_path.exists():
+            candidates.insert(0, str(pkg_path))
+    except Exception:
+        pass
+    return candidates[0] if candidates else None
+
 
 async def _run_sherlock(pseudo: str, message: Message):
     await message.answer(f"🔍 Sherlock : recherche de `{pseudo}` en cours...\n_Patiente 30-60s_")
+
+    data_json = _find_data_json()
+    cmd = [
+        "python3", "-m", "sherlock", pseudo,
+        "--print-found", "--no-color",
+        "--timeout", "10",
+    ]
+    if data_json:
+        cmd += ["--local", "--json", data_json]
+
     try:
         proc = await asyncio.create_subprocess_exec(
-            "python3", "-m", "sherlock", pseudo,
-            "--print-found", "--no-color",
+            *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=90)
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
     except asyncio.TimeoutError:
         await message.answer("⏱️ Timeout Sherlock.", reply_markup=back_main())
         return
@@ -32,6 +60,10 @@ async def _run_sherlock(pseudo: str, message: Message):
         return
 
     result = stdout.decode(errors="replace").strip()
+    # Filtrer les lignes d'erreur résiduelles
+    lines = [l for l in result.splitlines() if not l.startswith("ERROR") and not l.startswith("A problem")]
+    result = "\n".join(lines).strip()
+
     if not result:
         await message.answer(f"❌ Aucun résultat pour `{pseudo}`.", reply_markup=back_main())
         return
@@ -54,7 +86,7 @@ async def state_sherlock(message: Message, state: FSMContext):
     await _run_sherlock(message.text.strip(), message)
 
 
-# Commande directe (toujours disponible)
+# Commande directe
 @router.message(Command("sherlock"))
 @admin_only
 @rate_limit(seconds=30)
