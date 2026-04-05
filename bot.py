@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 from aiohttp import web
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
@@ -32,6 +33,16 @@ TOKEN        = os.getenv("TELEGRAM_TOKEN", "")
 WEBHOOK_URL  = os.getenv("WEBHOOK_URL", "")   # ex: https://mon-app.onrender.com
 WEBHOOK_PATH = "/webhook"
 PORT         = int(os.getenv("PORT", 8080))
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+async def handle_index(request):
+    """Sert la page de status sur /"""
+    index = STATIC_DIR / "index.html"
+    if index.exists():
+        return web.FileResponse(index)
+    return web.Response(text="OSINT Bot — Online", content_type="text/plain")
 
 
 async def on_startup(bot: Bot):
@@ -68,6 +79,7 @@ async def main():
     if WEBHOOK_URL:
         # --- Mode webhook (Render / production) ---
         app = web.Application()
+        app.router.add_get("/", handle_index)          # Page de status
         SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
         setup_application(app, dp, bot=bot)
         runner = web.AppRunner(app)
