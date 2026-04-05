@@ -1,6 +1,5 @@
 import asyncio
 import sys
-import os
 from pathlib import Path
 from aiogram import Router
 from aiogram.filters import Command
@@ -15,35 +14,16 @@ from utils.keyboards import back_main
 
 router = Router()
 
-def _find_data_json() -> str | None:
-    """Cherche le fichier data.json installé avec sherlock-project."""
-    candidates = []
-    for p in sys.path:
-        candidate = Path(p) / "sherlock" / "resources" / "data.json"
-        if candidate.exists():
-            candidates.append(str(candidate))
-    # Aussi via le package installé
-    try:
-        import sherlock
-        pkg_path = Path(sherlock.__file__).parent / "resources" / "data.json"
-        if pkg_path.exists():
-            candidates.insert(0, str(pkg_path))
-    except Exception:
-        pass
-    return candidates[0] if candidates else None
-
 
 async def _run_sherlock(pseudo: str, message: Message):
-    await message.answer(f"🔍 Sherlock : recherche de `{pseudo}` en cours...\n_Patiente 30-60s_")
+    await message.answer(f"🔍 Sherlock : recherche de `{pseudo}`...\n_Patiente 30-90s_")
 
-    data_json = _find_data_json()
     cmd = [
-        "python3", "-m", "sherlock", pseudo,
-        "--print-found", "--no-color",
+        sys.executable, "-m", "sherlock", pseudo,
+        "--print-found",
+        "--no-color",
         "--timeout", "10",
     ]
-    if data_json:
-        cmd += ["--local", "--json", data_json]
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -53,31 +33,59 @@ async def _run_sherlock(pseudo: str, message: Message):
         )
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
     except asyncio.TimeoutError:
-        await message.answer("⏱️ Timeout Sherlock.", reply_markup=back_main())
+        await message.answer("⏱️ Timeout Sherlock (120s).", reply_markup=back_main())
         return
     except Exception as e:
-        await message.answer(f"❌ Erreur : `{e}`", reply_markup=back_main())
+        await message.answer(f"❌ Erreur lancement : `{e}`", reply_markup=back_main())
         return
 
-    result = stdout.decode(errors="replace").strip()
-    # Filtrer les lignes d'erreur résiduelles
-    lines = [l for l in result.splitlines() if not l.startswith("ERROR") and not l.startswith("A problem")]
-    result = "\n".join(lines).strip()
+    raw_out = stdout.decode(errors="replace").strip()
+    raw_err = stderr.decode(errors="replace").strip()
 
-    if not result:
-        await message.answer(f"❌ Aucun résultat pour `{pseudo}`.", reply_markup=back_main())
+    # Garder uniquement les lignes [+] (trouvé) et les infos utiles
+    found_lines = []
+    info_lines = []
+    for line in raw_out.splitlines():
+        l = line.strip()
+        if l.startswith("[+]"):
+            found_lines.append(l)
+        elif l.startswith("[*]") or l.startswith("[>"):
+            info_lines.append(l)
+
+    if not found_lines:
+        # Envoyer le debug pour diagnostiquer
+        debug = raw_err[:1500] or raw_out[:1500] or "Aucune sortie."
+        await message.answer(
+            f"❌ Aucun résultat pour `{pseudo}`.\n\n"
+            f"🔧 *Debug stderr :*\n```\n{debug}\n```",
+            reply_markup=back_main()
+        )
         return
 
-    if len(result) > 4000:
-        file = BufferedInputFile(result.encode(), filename=f"sherlock_{pseudo}.txt")
-        await message.answer_document(file, caption=f"📄 Sherlock — `{pseudo}`", reply_markup=back_main())
+    # Formater les résultats proprement
+    count = len(found_lines)
+    lines_clean = []
+    for l in found_lines:
+        # [+] Platform: https://...
+        parts = l.replace("[+] ", "").split(": ", 1)
+        if len(parts) == 2:
+            lines_clean.append(f"✅ *{parts[0].strip()}* — {parts[1].strip()}")
+        else:
+            lines_clean.append(l)
+
+    header = f"📋 *Sherlock — `{pseudo}`* — {count} profil(s) trouvé(s)\n"
+    full_text = header + "\n".join(lines_clean)
+
+    if len(full_text) > 3800:
+        await message.answer_document(
+            BufferedInputFile(full_text.encode(), filename=f"sherlock_{pseudo}.txt"),
+            caption=f"📄 Sherlock — `{pseudo}` ({count} résultats)",
+            reply_markup=back_main()
+        )
     else:
-        for chunk in chunk_text(f"📋 *Sherlock — {pseudo}*\n\n```\n{result}\n```"):
-            await message.answer(chunk)
-        await message.answer("✅ Terminé.", reply_markup=back_main())
+        await message.answer(full_text, reply_markup=back_main())
 
 
-# FSM — réponse au bouton
 @router.message(OSINTForm.waiting_sherlock)
 @admin_only
 @rate_limit(seconds=30)
@@ -86,7 +94,6 @@ async def state_sherlock(message: Message, state: FSMContext):
     await _run_sherlock(message.text.strip(), message)
 
 
-# Commande directe
 @router.message(Command("sherlock"))
 @admin_only
 @rate_limit(seconds=30)
